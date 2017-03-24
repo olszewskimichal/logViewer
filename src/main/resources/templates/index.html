@@ -1,0 +1,75 @@
+<html xmlns:th="http://www.w3.org/1999/xhtml" lang="pl">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Log Viewer</title>
+    <style>
+        .form-group {
+            margin-right: 10px;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css"/>
+    <link href="http://cdn.jsdelivr.net/webjars/bootstrap/3.3.6/css/bootstrap.min.css"
+          rel="stylesheet" media="screen"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="container">
+    <div class="page-header">
+        <h1>Log file viewer</h1>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <div class="form-inline">
+                <form action="log/search" method="get">
+                    <div class="form-group">
+                        <label>Current location</label>
+                        <p class="form-control-static" th:text="${currentFolder}"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="term">Search</label>
+                        <input class="form-control" id="term" name="term" type="text"/>
+                    </div>
+                    <button class="btn btn-default">Search</button>
+                </form>
+            </div>
+        </div>
+        <table class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th>Name
+                    <a href="?sortBy=FILENAME&amp;desc=true"><i class="fa fa-arrow-up"/></a>
+                    <a href="?sortBy=FILENAME&amp;desc=false"><i class="fa fa-arrow-down"/></a>
+                </th>
+                <th>Size
+                    <a href="?sortBy=SIZE&amp;desc=true"><i class="fa fa-arrow-up"/></a>
+                    <a href="?sortBy=SIZE&amp;desc=false"><i class="fa fa-arrow-down"/></a>
+                </th>
+                <th>Modified
+                    <a href="?sortBy=MODIFIED&amp;desc=true"><i class="fa fa-arrow-up"/></a>
+                    <a href="?sortBy=MODIFIED&amp;desc=false"><i class="fa fa-arrow-down"/></a>
+                </th>
+            </tr>
+            </thead>
+            <tr>
+                <td><i class="fa fa-folder-o"></i>&nbsp;<a th:href="@{'/log?file='+${parent}}">..</a></td>
+            </tr>
+
+
+            <tr th:each="file : ${files}">
+                <td>
+                    <i th:if="${file.fileType.name()=='FILE'}" class="fa fa-file-o"></i>
+                    <i th:if="${file.fileType.name()=='DIRECTORY'}" class="fa fa-folder-o"></i>
+                    <i th:if="${file.fileType.name()=='ARCHIVE'}" class="fa fa-file-archive-o"></i>
+                    <a th:if="${file.fileType.name()!='FILE'}" th:href="@{/log(file=${file.filePath})}" th:utext="${file.filename}"></a>
+                    <a th:if="${file.fileType.name()=='FILE'}" th:href="@{/log/view(file=${file.filename})}" th:utext="${file.filename}"></a>&nbsp;
+                    <a th:href="@{/log/view(file=${file.filename},tailLines=50)}" title="Download last 50 lines"><i class="fa fa-angle-double-down"></i></a>
+                </td>
+                <td th:text="${file.customSize}"></td>
+                <td th:text="${file.customModified}"></td>
+            </tr>
+        </table>
+    </div>
+</div>
+</body>
+</html>
