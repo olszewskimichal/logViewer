@@ -18,10 +18,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 import com.olszewski.michal.domain.FileEntry;
 import com.olszewski.michal.domain.FileType;
+import com.olszewski.michal.domain.SearchResult;
 import com.olszewski.michal.domain.SortMethod;
+import com.olszewski.michal.domain.search.SearchProperties;
 import com.olszewski.michal.exceptions.FileNotFoundException;
 import com.olszewski.michal.exceptions.FileProcessingException;
 import lombok.extern.slf4j.Slf4j;
@@ -201,30 +205,6 @@ public class FileService {
 		}
 	}
 
-	public void searchAndStreamFile(List<FileEntry> fileEntries, String term, OutputStream outputStream) throws IOException {
-		for (FileEntry fileEntry : fileEntries) {
-			List<String> readLines = getFileContent(fileEntry.getPath(), fileEntry.getFilename());
-
-			List<String> result = new ArrayList<>();
-			for (int i = 0; i < readLines.size(); i++) {
-				if (readLines.get(i).contains(term)) {
-					result.add(String.format("\tline %d: %s", i + 1, readLines.get(i)));
-				}
-			}
-			if (!result.isEmpty())
-				result.add(0, String.format("%s (%d hit)", fileEntry.getFilePath(), result.size()));
-			result.forEach(v -> {
-				try {
-					outputStream.write(v.getBytes());
-					outputStream.write(System.lineSeparator().getBytes());
-				}
-				catch (IOException e) {
-					throw new FileNotFoundException("error reading file", e);
-				}
-			});
-		}
-	}
-
 	public List<String> getFileContent(Path file, String filename) throws IOException {
 		List<String> lines = new ArrayList<>();
 		if (iz7z(file)) {
@@ -260,7 +240,6 @@ public class FileService {
 				.createArchiveInputStream(new BufferedInputStream(fileInputStream))) {
 			ArchiveEntry entry;
 			while ((entry = input.getNextEntry()) != null) {
-				log.info(file.toString() + "\\" + entry.getName());
 				if (entry.getName().equalsIgnoreCase(filename))
 					lines.addAll(IOUtils.readLines(input, Charset.defaultCharset()));
 			}
@@ -273,25 +252,43 @@ public class FileService {
 		}
 	}
 
-	public List<FileEntry> getAllFileEntries(Path path) throws IOException {
+	public List<FileEntry> getAllFileEntries(Path path, SearchProperties searchProperties) throws IOException {
 		List<FileEntry> result = new ArrayList<>();
-		for (FileEntry entry : getFilesEntryFromPath(path)) {
+		List<FileEntry> files = getFilesEntryFromPath(path);
+		Optional.ofNullable(searchProperties.getSearchModifiedDate()).
+				ifPresent(x ->
+						files.removeIf(
+								v -> v.getModified().isBefore(x.getInstantDateFrom()) ||
+										v.getModified().isAfter(x.getInstantDateTo())));
+		Optional.ofNullable(searchProperties.getSearchFileName()).ifPresent(x -> {
+			if (x.getUseRegex()) {
+				Pattern r = Pattern.compile(x.getContent());
+				files.removeIf(v -> !r.matcher(v.getFilename()).matches());
+			}
+			else {
+				files.removeIf(v -> !v.getFilename().toLowerCase().contains(x.getContent().toLowerCase()));
+			}
+
+		});
+
+		for (FileEntry entry : files) {
 			result.add(entry);
-			if (!getFileType(Paths.get(path.toString(), entry.getFilename())).equals(FileType.FILE))
-				result.addAll(getAllFileEntries(Paths.get(path.toString(), entry.getFilename())));
+			if (searchProperties.getRecursive() && !getFileType(Paths.get(path.toString(), entry.getFilename())).equals(FileType.FILE))
+				result.addAll(getAllFileEntries(Paths.get(path.toString(), entry.getFilename()), searchProperties));
 		}
 		return result;
 	}
 
-	public List<String> searchRecursive(Path path, String term) throws IOException {
-		List<String> result = new ArrayList<>();
-		for (FileEntry entry : getAllFileEntries(path)) {
-			searchContentInEntry(term, result, entry);
+	public List<SearchResult> getLinesFromFiles(Path path, SearchProperties searchProperties) throws IOException {
+		List<SearchResult> searchResults = new ArrayList<>();
+		for (FileEntry fileEntry : getAllFileEntries(path, searchProperties)) {
+			Optional<SearchResult> searchResult = searchContentInEntry(searchProperties.getFileContent(), fileEntry);
+			searchResult.ifPresent(searchResults::add);
 		}
-		return result;
+		return searchResults;
 	}
 
-	private void searchContentInEntry(String term, List<String> result, FileEntry entry) throws IOException {
+	private Optional<SearchResult> searchContentInEntry(String term, FileEntry entry) throws IOException {
 		if (entry.getFileType().equals(FileType.FILE)) {
 			List<String> resultPerFile = new ArrayList<>();
 			List<String> fileContent = getFileContent(entry.getPath(), entry.getFilename());
@@ -301,10 +298,12 @@ public class FileService {
 				}
 			}
 			if (!resultPerFile.isEmpty()) {
-				resultPerFile.add(0, String.format("%s (%d hit)", entry.getFilePath() + "\\" + entry.getFilename(), resultPerFile.size()));
-				result.addAll(resultPerFile);
+				SearchResult searchResult = new SearchResult();
+				searchResult.setEntry(entry);
+				searchResult.setResult(resultPerFile);
+				return Optional.of(searchResult);
 			}
 		}
+		return Optional.empty();
 	}
-
 }

@@ -19,20 +19,45 @@
         <h1>Log file viewer</h1>
     </div>
     <div class="panel panel-default">
-        <div class="panel-heading">
-            <div class="form-inline">
-                <form action="log/search" method="get">
+        <div class="form-inline">
+            <form action="log" th:object="${searchProperties}" method="POST">
+                <div class="form-group col-md-12">
+                    <label>Current location</label>
+                    <p class="form-control-static" th:text="${currentFolder}"></p>
+                </div>
+                <div class="form-group col-md-12">
+                    <label for="dateFrom">Data modyfikacji od</label>
                     <div class="form-group">
-                        <label>Current location</label>
-                        <p class="form-control-static" th:text="${currentFolder}"></p>
+                        <input type="date" class="form-control" id="dateFrom" name="dateFrom"
+                               placeholder="" th:field="*{searchModifiedDate.dateFrom}"/>
                     </div>
+
+                    <label for="dateTo">Data modyfikacji do</label>
                     <div class="form-group">
-                        <label for="term">Search</label>
-                        <input class="form-control" id="term" name="term" type="text"/>
+                        <input type="date" class="form-control" id="dateTo" name="dateTo"
+                               placeholder="" th:field="*{searchModifiedDate.dateTo}"/>
                     </div>
+                </div>
+                <div class="form-group col-md-12">
+                    <label for="fileName">Nazwa pliku</label>
+                    <input type="text" class="form-control" id="fileName" name="testName" th:field="*{searchFileName.content}"/>
+                    <div class="checkbox">
+                        <label for="useRegex">Wyrażenie regularne</label>
+                        <input type="checkbox" id="useRegex" name="useRegex" th:field="*{searchFileName.useRegex}"/>
+                    </div>
+                </div>
+                <div class="form-group col-md-12">
+                    <label for="fileContent">Zawartość pliku</label>
+                    <input type="text" class="form-control" id="fileContent" required="required" name="fileContent" th:field="*{fileContent}"/>
+                    <div class="checkbox">
+                        <label for="recursive">Szukaj rekursywnie (rowniez w archiwach)</label>
+                        <input type="checkbox" id="recursive" name="recursive" th:field="*{recursive}"/>
+                    </div>
+                </div>
+                <div class="form-group col-md-12">
                     <button class="btn btn-default">Search</button>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
         <table class="table table-striped table-hover">
             <thead>

@@ -1,5 +1,8 @@
 package com.olszewski.michal.service;
 
+import static java.time.LocalDate.of;
+import static java.util.Date.from;
+import static java.util.Optional.of;
 import static org.assertj.core.api.Java6Assertions.assertThat;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -7,13 +10,19 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 
 import com.olszewski.michal.builders.FileEntryBuilder;
 import com.olszewski.michal.domain.FileEntry;
 import com.olszewski.michal.domain.FileType;
+import com.olszewski.michal.domain.SearchResult;
 import com.olszewski.michal.domain.SortMethod;
+import com.olszewski.michal.domain.search.SearchFileName;
+import com.olszewski.michal.domain.search.SearchModifiedDate;
+import com.olszewski.michal.domain.search.SearchProperties;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,23 +108,6 @@ public class FileServiceTest {
 	}
 
 	@Test
-	public void shouldReturnAllFiles() throws IOException, ArchiveException {
-		List<FileEntry> allFileEntries = fileService.getAllFileEntries(Paths.get("D:\\logi"));
-		for (FileEntry allFileEntry : allFileEntries) {
-			System.out.println(allFileEntry.getFilePath());
-		}
-		;
-	}
-
-	@Test
-	public void shouldReturnALlFilesContent() throws IOException, ArchiveException {
-		List<String> allFileContent = fileService.searchRecursive(Paths.get("D:\\logi\\Nowy folder"), "");
-		for (String s : allFileContent) {
-			System.out.println(s);
-		}
-	}
-
-	@Test
 	public void getFileContent() throws IOException, ArchiveException {
 		List<String> fileContent = fileService.getFileContent(Paths.get("D:\\logi\\file.zip"), "file.txt");
 		System.out.println(fileContent);
@@ -129,4 +121,75 @@ public class FileServiceTest {
 		assertThat(fileContent).isNotEmpty();
 	}
 
+	@Test
+	public void shouldSearchEntriesFromDateToDate() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		SearchModifiedDate modifiedDate = new SearchModifiedDate();
+		modifiedDate.setDateFrom(of(from(of(2017, 03, 25).atStartOfDay().toInstant(ZoneOffset.UTC))));
+		modifiedDate.setDateTo(of(from(LocalDate.now().plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC))));
+		searchProperties.setSearchModifiedDate(modifiedDate);
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(1);
+	}
+
+	@Test
+	public void shouldSearchEntriesFromDate() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		SearchModifiedDate modifiedDate = new SearchModifiedDate();
+		modifiedDate.setDateFrom(of(from(of(2017, 03, 25).atStartOfDay().toInstant(ZoneOffset.UTC))));
+		searchProperties.setSearchModifiedDate(modifiedDate);
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(1);
+	}
+
+	@Test
+	public void shouldSearchEntriesToDate() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		SearchModifiedDate modifiedDate = new SearchModifiedDate();
+		modifiedDate.setDateTo(of(from(of(2017, 03, 25).atStartOfDay().toInstant(ZoneOffset.UTC))));
+		searchProperties.setSearchModifiedDate(modifiedDate);
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(4);
+	}
+
+	@Test
+	public void shouldSearchAllEntries() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(5);
+	}
+
+	@Test
+	public void shouldSearchEntriesWithRegexName() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		SearchFileName searchFileName = new SearchFileName();
+		searchFileName.setUseRegex(true);
+		searchFileName.setContent(".*.log");
+		searchProperties.setSearchFileName(searchFileName);
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(1);
+	}
+
+	@Test
+	public void shouldSearchEntriesWithNameContent() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		SearchFileName searchFileName = new SearchFileName();
+		searchFileName.setUseRegex(false);
+		searchFileName.setContent("spring.log");
+		searchProperties.setSearchFileName(searchFileName);
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(1);
+	}
+
+	@Test
+	public void shouldSearchEntriesWithFileContent() throws IOException {
+		SearchProperties searchProperties = new SearchProperties();
+		searchProperties.setFileContent("Spring");
+		searchProperties.setRecursive(true);
+		List<FileEntry> result = fileService.getAllFileEntries(Paths.get("D:\\logi"), searchProperties);
+		assertThat(result.size()).isEqualTo(14);
+		List<SearchResult> linesFromFiles = fileService.getLinesFromFiles(Paths.get("D:\\logi"), searchProperties);
+		assertThat(linesFromFiles.size()).isEqualTo(1);
+		System.out.println(linesFromFiles);
+	}
 }
