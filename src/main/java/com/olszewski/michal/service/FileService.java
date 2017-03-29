@@ -8,7 +8,6 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -26,7 +25,6 @@ import com.olszewski.michal.domain.FileType;
 import com.olszewski.michal.domain.SearchResult;
 import com.olszewski.michal.domain.SortMethod;
 import com.olszewski.michal.domain.search.SearchProperties;
-import com.olszewski.michal.exceptions.FileNotFoundException;
 import com.olszewski.michal.exceptions.FileProcessingException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -178,31 +176,22 @@ public class FileService {
 		httpSession.setAttribute(FILE_NAME, file);
 	}
 
-	public void streamContent(Path file, String filename, OutputStream stream) {
-		try {
-			log.info(file + " " + filename + " ");
-			IOUtils.writeLines(getFileContent(file, filename), System.lineSeparator(), stream, Charset.defaultCharset());
-		}
-		catch (IOException e) {
-			throw new FileNotFoundException("Blad podczas wyswietlania calego pliku {}", e);
-		}
-	}
 
-	public void tailContent(Path path, String filename, OutputStream stream, int lines) throws IOException {
+	public List<String> tailContent(Path path, String filename, int lines) throws IOException {
 		if (isZip(path) || iz7z(path))
-			IOUtils.writeLines(singletonList("Nie mozna tailować pliku znajdującego się w archiwum"), System.lineSeparator(), stream, Charset.defaultCharset());
-		else {
-			try (ReversedLinesFileReader reader = new ReversedLinesFileReader(Paths.get(filename).toFile(), Charset.defaultCharset())) {
-				int i = 0;
-				String line;
-				List<String> content = new ArrayList<>();
-				while ((line = reader.readLine()) != null && i++ < lines) {
-					content.add(line);
-				}
-				Collections.reverse(content);
-				IOUtils.writeLines(content, System.lineSeparator(), stream, Charset.defaultCharset());
+			return singletonList("Nie mozna tailować pliku znajdującego się w archiwum");
+		List<String> content = new ArrayList<>();
+
+		try (ReversedLinesFileReader reader = new ReversedLinesFileReader(Paths.get(path.toString(), filename).toFile(), Charset.defaultCharset())) {
+			int i = 0;
+			String line;
+			while ((line = reader.readLine()) != null && i++ < lines) {
+				content.add(line);
 			}
+			Collections.reverse(content);
 		}
+		return content;
+
 	}
 
 	public List<String> getFileContent(Path file, String filename) throws IOException {

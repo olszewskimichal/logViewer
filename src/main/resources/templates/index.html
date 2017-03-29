@@ -20,7 +20,7 @@
     </div>
     <div class="panel panel-default">
         <div class="form-inline">
-            <form action="log" th:object="${searchProperties}" method="POST">
+            <form action="/rest/log" th:object="${searchProperties}" method="POST">
                 <div class="form-group col-md-12">
                     <label>Current location</label>
                     <p class="form-control-static" th:text="${currentFolder}"></p>
@@ -87,8 +87,8 @@
                     <i th:if="${file.fileType.name()=='DIRECTORY'}" class="fa fa-folder-o"></i>
                     <i th:if="${file.fileType.name()=='ARCHIVE'}" class="fa fa-file-archive-o"></i>
                     <a th:if="${file.fileType.name()!='FILE'}" th:href="@{/log(file=${file.filePath})}" th:utext="${file.filename}"></a>
-                    <a th:if="${file.fileType.name()=='FILE'}" th:href="@{/log/view(file=${file.filename})}" th:utext="${file.filename}"></a>&nbsp;
-                    <a th:href="@{/log/view(file=${file.filename},tailLines=50)}" title="Download last 50 lines"><i class="fa fa-angle-double-down"></i></a>
+                    <a th:if="${file.fileType.name()=='FILE'}" th:href="@{/rest/log/view(file=${file.filename})}" th:utext="${file.filename}"></a>&nbsp;
+                    <a th:href="@{/rest/log/view(file=${file.filename},tailLines=50)}" title="Download last 50 lines"><i class="fa fa-angle-double-down"></i></a>
                 </td>
                 <td th:text="${file.customSize}"></td>
                 <td th:text="${file.customModified}"></td>

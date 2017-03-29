@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import org.apache.commons.io.FileUtils;
 
@@ -15,14 +16,19 @@ import org.apache.commons.io.FileUtils;
 public class FileEntry {
 	private String filename;
 	private Path filePath;
+	@JsonIgnore
 	private Instant modified;
+	@JsonIgnore
 	private FileType fileType;
+	@JsonIgnore
 	private long size;
 
+	@JsonIgnore
 	public String getCustomSize() {
 		return FileUtils.byteCountToDisplaySize(size);
 	}
 
+	@JsonIgnore
 	public String getCustomModified() {
 		DateTimeFormatter formatter =
 				DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
@@ -41,6 +47,7 @@ public class FileEntry {
 		return filename;
 	}
 
+	@JsonIgnore
 	public Path getPath() {
 		return filePath;
 	}
