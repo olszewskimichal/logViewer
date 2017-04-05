@@ -3,6 +3,7 @@ package com.olszewski.michal.controller;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 
 import com.olszewski.michal.domain.SearchResult;
 import com.olszewski.michal.domain.search.SearchProperties;
@@ -27,25 +28,28 @@ public class LogRestController {
 
 	private final FileService fileService;
 
+
 	public LogRestController(FileService fileService) {
 		this.fileService = fileService;
 	}
 
 	@RequestMapping(method = RequestMethod.POST)
-	@ResponseBody public List<SearchResult> searchFiles(SearchProperties properties) throws IOException {
+	@ResponseBody
+	public List<SearchResult> searchFiles(SearchProperties properties) throws IOException {
 		String path = fileService.getFileNameFromSession(loggingPath);
 		return fileService.getLinesFromFiles(Paths.get(path), properties);
 	}
 
 	@RequestMapping(method = RequestMethod.GET, value = "/view")
-	@ResponseBody public List<String> fileContentViewPage(@RequestParam String file, @RequestParam(required = false) Integer tailLines) {
+	@ResponseBody
+	public List<String> fileContentViewPage(@RequestParam String file, @RequestParam(required = false) Integer tailLines, @RequestParam(required = false) Optional<String> term) {
 		log.info(file + " " + tailLines);
 		try {
 			String path = fileService.getFileNameFromSession(loggingPath);
 			if (tailLines != null)
-				return fileService.tailContent(Paths.get(path), file, tailLines);
+				return fileService.tailContent(Paths.get(path), file, term, tailLines);
 			else
-				return fileService.getFileContent(Paths.get(path), file);
+				return fileService.getFileContent(Paths.get(path), file, term);
 		}
 		catch (IOException e) {
 			throw new FileNotFoundException("Blad podczas wyswietlania podgladu pliku " + e);

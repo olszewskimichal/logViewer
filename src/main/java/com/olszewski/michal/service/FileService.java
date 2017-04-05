@@ -2,6 +2,7 @@ package com.olszewski.michal.service;
 
 import static java.nio.file.Files.newDirectoryStream;
 import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
 
 import javax.servlet.http.HttpSession;
 import java.io.BufferedInputStream;
@@ -177,7 +178,7 @@ public class FileService {
 	}
 
 
-	public List<String> tailContent(Path path, String filename, int lines) throws IOException {
+	public List<String> tailContent(Path path, String filename, Optional<String> term, int lines) throws IOException {
 		if (isZip(path) || iz7z(path))
 			return singletonList("Nie mozna tailować pliku znajdującego się w archiwum");
 		List<String> content = new ArrayList<>();
@@ -190,11 +191,14 @@ public class FileService {
 			}
 			Collections.reverse(content);
 		}
+		term.ifPresent(v ->
+				content.removeIf(c -> !c.toLowerCase().contains(v.toLowerCase()))
+		);
 		return content;
 
 	}
 
-	public List<String> getFileContent(Path file, String filename) throws IOException {
+	public List<String> getFileContent(Path file, String filename, Optional<String> term) throws IOException {
 		List<String> lines = new ArrayList<>();
 		if (iz7z(file)) {
 			readLinesFrom7zArchive(file, filename, lines);
@@ -206,7 +210,7 @@ public class FileService {
 			lines.addAll(IOUtils.readLines(new FileInputStream(Paths.get(file.toString(), filename).toFile()), Charset.defaultCharset()));
 		else
 			lines.addAll(IOUtils.readLines(new FileInputStream(file.toFile()), Charset.defaultCharset()));
-		return lines;
+		return term.map(s -> lines.stream().filter(v -> v.toLowerCase().contains(s.toLowerCase())).collect(toList())).orElse(lines);
 	}
 
 	private void readLinesFrom7zArchive(Path file, String filename, List<String> lines) throws IOException {
@@ -280,7 +284,7 @@ public class FileService {
 	private Optional<SearchResult> searchContentInEntry(String term, FileEntry entry) throws IOException {
 		if (entry.getFileType().equals(FileType.FILE)) {
 			List<String> resultPerFile = new ArrayList<>();
-			List<String> fileContent = getFileContent(entry.getPath(), entry.getFilename());
+			List<String> fileContent = getFileContent(entry.getPath(), entry.getFilename(), Optional.empty());
 			for (int i = 0; i < fileContent.size(); i++) {
 				if (fileContent.get(i).contains(term)) {
 					resultPerFile.add(String.format("\tline %d: %s", i + 1, fileContent.get(i)));
